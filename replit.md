@@ -1,12 +1,13 @@
-# AI Trading Bot Dashboard
+# Professional AI Trading Bot - Institutional Grade
 
 ## Overview
 
-This is a full-stack web application for an AI-powered cryptocurrency trading bot. It features a React frontend with a modern dark theme UI built using shadcn/ui components, and an Express.js backend with PostgreSQL database integration using Drizzle ORM. The application provides real-time trading data visualization, bot management controls, and comprehensive portfolio monitoring.
+This is a professional-grade, fully autonomous AI trading bot for cryptocurrencies with institutional-level features. The system includes real exchange integrations (Binance, Coinbase), advanced machine learning models, comprehensive risk management, sentiment analysis, on-chain analysis, cross-exchange arbitrage, and a sophisticated React frontend. Built with Node.js/Express backend, PostgreSQL database, and deployed on a single URL.
 
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
+Target: 10/10 institutional-grade intelligence and professionalism.
 
 ## System Architecture
 
@@ -42,6 +43,14 @@ Preferred communication style: Simple, everyday language.
 - **Market Data**: Real-time cryptocurrency market information
 - **Risk Metrics**: Portfolio risk assessment and metrics
 - **Alerts**: System notifications and trading alerts
+
+### Advanced Trading Components
+- **Risk Management**: VaR, Monte Carlo simulations, portfolio heat analysis
+- **ML Models**: LSTM, Random Forest, Neural Networks, Reinforcement Learning
+- **Sentiment Analysis**: News, social media, Fear & Greed Index
+- **On-Chain Analysis**: Whale movements, exchange flows, network metrics
+- **Arbitrage Engine**: Cross-exchange, statistical, triangular arbitrage
+- **Signal Generator**: Multi-factor analysis combining all components
 
 ### Frontend Components
 - **Dashboard Layout**: Fixed sidebar navigation with main content area
