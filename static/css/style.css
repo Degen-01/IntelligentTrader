@@ -6,13 +6,13 @@
 
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
     min-height: 100vh;
     color: #333;
 }
 
 .container {
-    max-width: 1400px;
+    max-width: 1600px;
     margin: 0 auto;
     padding: 20px;
 }
@@ -32,6 +32,70 @@ header h1 {
 header p {
     font-size: 1.2rem;
     opacity: 0.9;
+    margin-bottom: 20px;
+}
+
+.trading-controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.btn {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-success {
+    background: linear-gradient(135deg, #27ae60, #2ecc71);
+    color: white;
+}
+
+.btn-danger {
+    background: linear-gradient(135deg, #e74c3c, #c0392b);
+    color: white;
+}
+
+.btn-buy {
+    background: linear-gradient(135deg, #27ae60, #2ecc71);
+    color: white;
+}
+
+.btn-sell {
+    background: linear-gradient(135deg, #e74c3c, #c0392b);
+    color: white;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+
+.status {
+    font-size: 1.5rem;
+    margin-left: 10px;
+}
+
+.status.active {
+    color: #2ecc71;
+    animation: pulse 2s infinite;
+}
+
+.status.inactive {
+    color: #e74c3c;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
 }
 
 .dashboard {
@@ -41,11 +105,12 @@ header p {
 }
 
 .card {
-    background: white;
+    background: rgba(255, 255, 255, 0.95);
     border-radius: 15px;
     padding: 25px;
     box-shadow: 0 10px 30px rgba(0,0,0,0.1);
     transition: transform 0.3s ease, box-shadow 0.3s ease;
+    backdrop-filter: blur(10px);
 }
 
 .card:hover {
@@ -57,108 +122,127 @@ header p {
     grid-column: 1 / -1;
 }
 
+.card.ai-status {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+}
+
+.card.portfolio {
+    background: linear-gradient(135deg, #f093fb, #f5576c);
+    color: white;
+}
+
 .card h2 {
-    color: #2c3e50;
     margin-bottom: 20px;
     font-size: 1.5rem;
-    border-bottom: 2px solid #3498db;
+    border-bottom: 2px solid rgba(255,255,255,0.3);
     padding-bottom: 10px;
 }
 
-.market-stats {
+.ai-metrics, .portfolio-stats {
     display: flex;
-    justify-content: space-between;
-    flex-wrap: wrap;
+    flex-direction: column;
     gap: 15px;
 }
 
-.stat {
+.metric, .stat {
     display: flex;
-    flex-direction: column;
+    justify-content: space-between;
     align-items: center;
-    padding: 15px;
-    background: #f8f9fa;
+    padding: 10px 15px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 8px;
+}
+
+.stat-large {
+    text-align: center;
+    padding: 20px;
+    background: rgba(255,255,255,0.1);
     border-radius: 10px;
-    flex: 1;
-    min-width: 120px;
+    margin-bottom: 15px;
 }
 
-.stat .label {
-    font-size: 0.9rem;
-    color: #666;
-    margin-bottom: 5px;
-}
-
-.stat .value {
-    font-size: 1.3rem;
+.stat-large .value {
+    font-size: 2.5rem;
     font-weight: bold;
-    color: #2c3e50;
-    margin-bottom: 5px;
+    display: block;
+    margin: 10px 0;
+}
+
+.stat-row {
+    display: flex;
+    gap: 15px;
+}
+
+.stat-row .stat {
+    flex: 1;
+}
+
+.label {
+    font-size: 0.9rem;
+    opacity: 0.8;
+}
+
+.value {
+    font-size: 1.2rem;
+    font-weight: bold;
 }
 
 .change {
-    font-size: 0.9rem;
+    font-size: 1rem;
     font-weight: bold;
 }
 
 .change.positive {
-    color: #27ae60;
+    color: #2ecc71;
 }
 
 .change.negative {
     color: #e74c3c;
 }
 
-.portfolio-summary {
-    background: linear-gradient(135deg, #3498db, #2980b9);
-    color: white;
-    padding: 20px;
-    border-radius: 10px;
-    margin-bottom: 20px;
-}
-
-.portfolio-value {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-
-.portfolio-value .label {
-    font-size: 1rem;
-    opacity: 0.9;
-    margin-bottom: 5px;
-}
-
-.portfolio-value .value {
-    font-size: 2rem;
-    font-weight: bold;
-    margin-bottom: 5px;
-}
-
 .table-container {
     overflow-x: auto;
+    margin-top: 15px;
 }
 
 table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 15px;
+    background: white;
+    border-radius: 10px;
+    overflow: hidden;
 }
 
 th, td {
-    padding: 12px;
+    padding: 15px;
     text-align: left;
-    border-bottom: 1px solid #ddd;
+    border-bottom: 1px solid #eee;
 }
 
 th {
-    background-color: #f8f9fa;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
     font-weight: bold;
-    color: #2c3e50;
 }
 
 tr:hover {
-    background-color: #f5f5f5;
+    background-color: #f8f9fa;
+}
+
+.signal-buy {
+    color: #27ae60;
+    font-weight: bold;
+}
+
+.signal-sell {
+    color: #e74c3c;
+    font-weight: bold;
+}
+
+.signal-hold {
+    color: #f39c12;
+    font-weight: bold;
 }
 
 .trade-form {
@@ -168,30 +252,72 @@ tr:hover {
 }
 
 .trade-form input,
-.trade-form select,
-.trade-form button {
+.trade-form select {
     padding: 12px;
     border: 1px solid #ddd;
     border-radius: 8px;
     font-size: 1rem;
 }
 
-.trade-form button {
-    background: linear-gradient(135deg, #27ae60, #2ecc71);
-    color: white;
-    border: none;
-    cursor: pointer;
-    font-weight: bold;
-    transition: background 0.3s ease;
+.trade-buttons {
+    display: flex;
+    gap: 10px;
 }
 
-.trade-form button:hover {
-    background: linear-gradient(135deg, #229954, #27ae60);
+.trade-buttons .btn {
+    flex: 1;
 }
 
-.news-feed {
+.chart-controls {
+    margin-bottom: 20px;
+}
+
+.chart-controls select {
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 1rem;
+}
+
+#liveChart {
     max-height: 400px;
-    overflow-y: auto;
+}
+
+.position-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    margin-bottom: 10px;
+}
+
+.position-symbol {
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+
+.position-details {
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.position-value {
+    text-align: right;
+}
+
+.crypto-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.crypto-name {
+    font-weight: bold;
+    text-transform: uppercase;
 }
 
 .news-item {
@@ -203,25 +329,23 @@ tr:hover {
     border-bottom: none;
 }
 
-.news-item h4 {
+.news-title {
+    font-weight: bold;
+    margin-bottom: 5px;
     color: #2c3e50;
-    margin-bottom: 8px;
-    font-size: 1.1rem;
 }
 
-.news-item p {
+.news-summary {
     color: #666;
-    margin-bottom: 8px;
+    font-size: 0.9rem;
     line-height: 1.4;
 }
 
-.news-time {
-    color: #999;
-    font-size: 0.9rem;
-}
-
-#priceChart {
-    max-height: 400px;
+.loading, .no-data {
+    text-align: center;
+    color: #666;
+    font-style: italic;
+    padding: 20px;
 }
 
 @media (max-width: 768px) {
@@ -233,11 +357,17 @@ tr:hover {
         font-size: 2rem;
     }
     
-    .market-stats {
+    .trading-controls {
         flex-direction: column;
+        gap: 10px;
     }
     
-    .trade-form {
+    .stat-row {
+        flex-direction: column;
         gap: 10px;
+    }
+    
+    .trade-buttons {
+        flex-direction: column;
     }
 }

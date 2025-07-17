@@ -3,118 +3,146 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🚀 IntelligentTrader</title>
+    <title>🚀 IntelligentTrader - AI Trading Platform</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
 </head>
 <body>
     <div class="container">
         <header>
             <h1>🚀 IntelligentTrader</h1>
-            <p>Professional Trading Dashboard</p>
+            <p>Autonomous AI Trading Platform</p>
+            <div class="trading-controls">
+                <button id="startTrading" class="btn btn-success">Start AI Trading</button>
+                <button id="stopTrading" class="btn btn-danger">Stop AI Trading</button>
+                <span id="tradingStatus" class="status">●</span>
+            </div>
         </header>
 
         <div class="dashboard">
-            <!-- Market Overview -->
-            <div class="card">
-                <h2>Market Overview</h2>
-                <div class="market-stats">
-                    <div class="stat">
-                        <span class="label">S&P 500</span>
-                        <span class="value">4,185.47</span>
-                        <span class="change positive">+0.85%</span>
+            <!-- AI Status Panel -->
+            <div class="card ai-status">
+                <h2>🤖 AI Trading Engine</h2>
+                <div class="ai-metrics">
+                    <div class="metric">
+                        <span class="label">Status</span>
+                        <span id="aiStatus" class="value">Initializing...</span>
                     </div>
-                    <div class="stat">
-                        <span class="label">NASDAQ</span>
-                        <span class="value">12,888.28</span>
-                        <span class="change positive">+1.23%</span>
+                    <div class="metric">
+                        <span class="label">Confidence</span>
+                        <span id="aiConfidence" class="value">--</span>
                     </div>
-                    <div class="stat">
-                        <span class="label">DOW</span>
-                        <span class="value">33,745.40</span>
-                        <span class="change negative">-0.45%</span>
+                    <div class="metric">
+                        <span class="label">Last Signal</span>
+                        <span id="lastSignal" class="value">--</span>
                     </div>
                 </div>
             </div>
 
-            <!-- Portfolio Summary -->
-            <div class="card">
-                <h2>Portfolio Summary</h2>
-                <div class="portfolio-summary">
-                    <div class="portfolio-value">
+            <!-- Portfolio Performance -->
+            <div class="card portfolio">
+                <h2>💼 Portfolio Performance</h2>
+                <div class="portfolio-stats">
+                    <div class="stat-large">
                         <span class="label">Total Value</span>
-                        <span class="value">\$125,847.32</span>
-                        <span class="change positive">+\$2,847.32 (2.31%)</span>
+                        <span id="totalValue" class="value">\$0.00</span>
+                        <span id="totalReturn" class="change">+\$0.00 (0.00%)</span>
+                    </div>
+                    <div class="stat-row">
+                        <div class="stat">
+                            <span class="label">Available Balance</span>
+                            <span id="availableBalance" class="value">\$0.00</span>
+                        </div>
+                        <div class="stat">
+                            <span class="label">Positions</span>
+                            <span id="positionCount" class="value">0</span>
+                        </div>
                     </div>
                 </div>
-                <div id="portfolio-list"></div>
             </div>
 
-            <!-- Stock Watchlist -->
+            <!-- Live Market Data -->
             <div class="card full-width">
-                <h2>Stock Watchlist</h2>
+                <h2>📈 Live Market Data & AI Signals</h2>
                 <div class="table-container">
-                    <table id="stocks-table">
+                    <table id="marketTable">
                         <thead>
                             <tr>
                                 <th>Symbol</th>
                                 <th>Price</th>
                                 <th>Change</th>
-                                <th>Change %</th>
-                                <th>Volume</th>
-                                <th>Market Cap</th>
+                                <th>AI Signal</th>
+                                <th>Confidence</th>
+                                <th>Action</th>
                             </tr>
                         </thead>
-                        <tbody id="stocks-tbody">
+                        <tbody id="marketTableBody">
                         </tbody>
                     </table>
                 </div>
             </div>
 
-            <!-- Chart -->
+            <!-- Live Chart -->
             <div class="card full-width">
-                <h2>Price Chart</h2>
-                <canvas id="priceChart"></canvas>
+                <h2>📊 Live Price Chart</h2>
+                <div class="chart-controls">
+                    <select id="chartSymbol">
+                        <option value="AAPL">AAPL</option>
+                        <option value="GOOGL">GOOGL</option>
+                        <option value="MSFT">MSFT</option>
+                        <option value="AMZN">AMZN</option>
+                        <option value="TSLA">TSLA</option>
+                    </select>
+                </div>
+                <canvas id="liveChart"></canvas>
             </div>
 
-            <!-- Trading Actions -->
+            <!-- Active Positions -->
             <div class="card">
-                <h2>Quick Trade</h2>
-                <div class="trade-form">
-                    <input type="text" placeholder="Symbol (e.g., AAPL)" id="trade-symbol">
-                    <input type="number" placeholder="Quantity" id="trade-quantity">
-                    <select id="trade-action">
-                        <option value="buy">Buy</option>
-                        <option value="sell">Sell</option>
-                    </select>
-                    <button onclick="executeTrade()">Execute Trade</button>
+                <h2>📋 Active Positions</h2>
+                <div id="positionsList">
+                    <p class="no-data">No active positions</p>
                 </div>
             </div>
 
-            <!-- News Feed -->
+            <!-- Manual Trading -->
             <div class="card">
-                <h2>Market News</h2>
-                <div class="news-feed">
-                    <div class="news-item">
-                        <h4>Tech Stocks Rally Continues</h4>
-                        <p>Major technology stocks continue their upward trend...</p>
-                        <span class="news-time">2 hours ago</span>
+                <h2>⚡ Manual Trading</h2>
+                <div class="trade-form">
+                    <select id="manualSymbol">
+                        <option value="AAPL">AAPL</option>
+                        <option value="GOOGL">GOOGL</option>
+                        <option value="MSFT">MSFT</option>
+                        <option value="AMZN">AMZN</option>
+                        <option value="TSLA">TSLA</option>
+                    </select>
+                    <input type="number" id="manualQuantity" placeholder="Quantity" min="1">
+                    <div class="trade-buttons">
+                        <button onclick="executeTrade('BUY')" class="btn btn-buy">Buy</button>
+                        <button onclick="executeTrade('SELL')" class="btn btn-sell">Sell</button>
                     </div>
-                    <div class="news-item">
-                        <h4>Federal Reserve Meeting Update</h4>
-                        <p>The Fed signals potential rate changes in upcoming meeting...</p>
-                        <span class="news-time">4 hours ago</span>
-                    </div>
-                    <div class="news-item">
-                        <h4>Earnings Season Preview</h4>
-                        <p>Key companies to watch in the upcoming earnings season...</p>
-                        <span class="news-time">6 hours ago</span>
-                    </div>
+                </div>
+            </div>
+
+            <!-- Crypto Prices -->
+            <div class="card">
+                <h2>₿ Cryptocurrency</h2>
+                <div id="cryptoPrices">
+                    <p class="loading">Loading crypto data...</p>
+                </div>
+            </div>
+
+            <!-- Market News -->
+            <div class="card">
+                <h2>📰 Market News</h2>
+                <div id="newsFeed">
+                    <p class="loading">Loading news...</p>
                 </div>
             </div>
         </div>
     </div>
 
-    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
 </html>
