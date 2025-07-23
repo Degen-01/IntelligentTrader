@@ -1,0 +1,34 @@
+{
+  "deployment_policy": {
+    "required_metrics": {
+      "accuracy": 0.75,
+      "f1_score": 0.70,
+      "precision": 0.65
+    },
+    "min_training_data_size": 10000,
+    "max_training_time_minutes": 120
+  },
+  "monitoring_policy": {
+    "performance_thresholds": {
+      "accuracy": 0.70,
+      "f1_score": 0.65
+    },
+    "data_drift_threshold": 0.01,
+    "model_drift_accuracy_drop_threshold": 0.10,
+    "drift_check_frequency_hours": 24
+  },
+  "retraining_policy": {
+    "auto_retrain_on_drift": true,
+    "retrain_interval_days": 30,
+    "max_retrain_attempts": 3
+  },
+  "data_retention_policy": {
+    "historical_data_days": 365,
+    "prediction_logs_days": 180,
+    "model_versions_to_keep": 5
+  },
+  "audit_policy": {
+    "audit_frequency_days": 90,
+    "auditor_roles": ["MLOpsEngineer", "ComplianceOfficer"]
+  }
+}
