@@ -1,185 +1,128 @@
-"""Data processing, validation, and feature engineering for market data."""
+# intelligent_trader/data_pipeline/data_processor.py (Conceptual additions)
 
-import pandas as pd
-import numpy as np
-from typing import Dict, Any, Optional, List
-import logging
-from ..core.exceptions import DataValidationError
-
-logger = logging.getLogger(__name__)
+import ta  # Python Technical Analysis Library
+# import pandas_ta as pta # Another popular TA library
+# import yfinance as yf # For fetching some data like short interest
+# from fredapi import Fred # For macroeconomic data
 
 class DataProcessor:
-    def __init__(self, required_columns: List[str] = ['open', 'high', 'low', 'close', 'volume']):
-        self.required_columns = required_columns
-        
-    def validate_ohlcv_data(self, df: pd.DataFrame) -> bool:
+    # ... (existing __init__ and methods) ...
+
+    def add_advanced_technical_indicators(self, df: pd.DataFrame) -> pd.DataFrame:
         """
-        Validate OHLCV data for completeness and correctness.
-        Checks for:
-        - Datetime index
-        - Required columns
-        - Non-negative values for volume, open, high, low, close
-        - High >= Low, High >= Open, High >= Close, Low <= Open, Low <= Close
+        Adds a wide range of advanced technical indicators.
+        Requires 'open', 'high', 'low', 'close', 'volume' columns.
         """
-        if not isinstance(df, pd.DataFrame):
-            logger.error("Input is not a pandas DataFrame.")
-            raise DataValidationError("Input is not a pandas DataFrame.")
+        if not all(col in df.columns for col in ['open', 'high', 'low', 'close', 'volume']):
+            logger.warning("Missing OHLCV data for advanced technical indicators.")
+            return df
 
-        if not isinstance(df.index, pd.DatetimeIndex):
-            logger.error("DataFrame index must be a DatetimeIndex.")
-            raise DataValidationError("DataFrame index must be a DatetimeIndex.")
-
-        missing_cols = [col for col in self.required_columns if col not in df.columns]
-        if missing_cols:
-            logger.error(f"Missing required columns: {missing_cols}")
-            raise DataValidationError(f"Missing required columns: {missing_cols}")
+        # Volatility Indicators
+        df['ATR'] = ta.volatility.average_true_range(df['high'], df['low'], df['close'], window=14)
+        df['Bollinger_High'] = ta.volatility.bollinger_hband(df['close'], window=20, window_dev=2)
+        df['Bollinger_Low'] = ta.volatility.bollinger_lband(df['close'], window=20, window_dev=2)
+        df['Keltner_High'] = ta.volatility.keltner_channel_hband(df['high'], df['low'], df['close'], window=20)
+        df['Keltner_Low'] = ta.volatility.keltner_channel_lband(df['high'], df['low'], df['close'], window=20)
         
-        # Check for non-negative values
-        numeric_cols = df[self.required_columns].select_dtypes(include=np.number).columns
-        if (df[numeric_cols] < 0).any().any():
-            logger.error("Negative values found in OHLCV data.")
-            raise DataValidationError("Negative values found in OHLCV data.")
-
-        # Check OHLC relationships
-        # This can be computationally intensive for large datasets; consider sampling or vectorized checks for production
-        # For simplicity, keeping row-wise check here. Vectorized check example: (df['high'] < df['low']).any()
-        for i, row in df.iterrows():
-            if not (row['high'] >= row['low'] and
-                    row['high'] >= row['open'] and
-                    row['high'] >= row['close'] and
-                    row['low'] <= row['open'] and
-                    row['low'] <= row['close']):
-                logger.error(f"Invalid OHLC relationship at {i}: {row.to_dict()}")
-                raise DataValidationError(f"Invalid OHLC relationship at {i}")
+        # Momentum Indicators
+        df['RSI'] = ta.momentum.rsi(df['close'], window=14)
+        df['Stoch_K'] = ta.momentum.stoch(df['high'], df['low'], df['close'], window=14, smooth_window=3)
+        df['Stoch_D'] = ta.momentum.stoch_signal(df['high'], df['low'], df['close'], window=14, smooth_window=3)
+        df['ADX'] = ta.trend.adx(df['high'], df['low'], df['close'], window=14)
+        df['CCI'] = ta.trend.cci(df['high'], df['low'], df['close'], window=14)
         
-        logger.info("OHLCV data validated successfully.")
-        return True
-
-    def clean_data(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Handle missing values and outliers (basic)."""
-        original_rows = len(df)
-        df.dropna(subset=self.required_columns, inplace=True)
-        if len(df) < original_rows:
-            logger.warning(f"Removed {original_rows - len(df)} rows with missing OHLCV data.")
-            
-        # Optional: Outlier detection and capping/replacement
-        # For a truly institutional grade, this would involve more sophisticated statistical methods
-        # like Z-score, IQR, or machine learning based outlier detection.
-        for col in ['volume', 'open', 'high', 'low', 'close']:
-            if col in df.columns:
-                q1 = df[col].quantile(0.01)
-                q99 = df[col].quantile(0.99)
-                df[col] = df[col].clip(lower=q1, upper=q99)
-                logger.debug(f"Capped outliers for column {col} between {q1:.2f} and {q99:.2f}.")
-                
+        # Trend Indicators (beyond simple SMAs)
+        df['Ichimoku_Conversion_Line'] = ta.trend.ichimoku_conversion_line(df['high'], df['low'])
+        df['Ichimoku_Base_Line'] = ta.trend.ichimoku_base_line(df['high'], df['low'])
+        df['MACD'] = ta.trend.macd(df['close'])
+        df['MACD_Signal'] = ta.trend.macd_signal(df['close'])
+        
+        # Volume Indicators
+        df['On_Balance_Volume'] = ta.volume.on_balance_volume(df['close'], df['volume'])
+        df['Chaikin_Money_Flow'] = ta.volume.chaikin_money_flow(df['high'], df['low'], df['close'], df['volume'])
+        
+        logger.info("Added advanced technical indicators.")
         return df
 
-    def add_technical_indicators(self, df: pd.DataFrame, indicators: Optional[List[str]] = None) -> pd.DataFrame:
+    def add_market_sentiment_features(self, df: pd.DataFrame, news_data: Optional[pd.DataFrame] = None) -> pd.DataFrame:
         """
-        Add common technical indicators to the DataFrame.
-        Requires 'TA-Lib' or custom implementations.
-        For production, use a dedicated library like 'ta' (technical analysis).
+        Integrates market sentiment features.
+        Requires sentiment scores from an external source (e.g., news analysis, social media).
         """
-        try:
-            import ta
-        except ImportError:
-            logger.warning("TA-Lib or 'ta' library not found. Skipping technical indicator generation. Install 'ta' (pip install ta) for this feature.")
-            return df
+        if news_data is not None and not news_data.empty:
+            # Example: Join news sentiment scores to main DataFrame
+            # This would require aligning news data timestamps with OHLCV data intervals.
+            # Assuming news_data has 'timestamp' and 'sentiment_score'
+            df['daily_sentiment_avg'] = news_data.set_index('timestamp')['sentiment_score'].resample(df.index.freq).mean()
+            df['daily_sentiment_std'] = news_data.set_index('timestamp')['sentiment_score'].resample(df.index.freq).std()
+            df = df.fillna(method='ffill').fillna(0) # Fill NaNs (no news days)
+            logger.info("Added news sentiment features.")
+        else:
+            logger.warning("No news data provided for sentiment features.")
+            df['daily_sentiment_avg'] = 0.0 # Placeholder
+            df['daily_sentiment_std'] = 0.0 # Placeholder
         
-        df_copy = df.copy() # Operate on a copy to avoid SettingWithCopyWarning
+        # Placeholder for other sentiment sources (e.g., social media, analyst ratings)
+        # df['social_media_sentiment'] = ...
+        # df['analyst_rating_change'] = ...
+        return df
 
-        if indicators is None:
-            # Default set of indicators
-            indicators = [
-                'rsi', 'macd', 'bollinger', 'sma', 'ema', 'adx', 'stoch', 'volume_oscillator'
-            ]
-        
-        # Ensure required columns are present for indicators
-        # This is a simplified check; each indicator might have specific dependencies
-        if not all(col in df_copy.columns for col in ['open', 'high', 'low', 'close', 'volume']):
-            logger.error("Missing OHLCV data for technical indicator calculation.")
-            return df_copy
-            
-        if 'rsi' in indicators:
-            df_copy['rsi'] = ta.momentum.RSIIndicator(df_copy['close'], window=14).rsi()
-        
-        if 'macd' in indicators:
-            macd = ta.trend.MACD(df_copy['close'])
-            df_copy['macd'] = macd.macd()
-            df_copy['macd_signal'] = macd.macd_signal()
-            df_copy['macd_diff'] = macd.macd_diff()
-
-        if 'bollinger' in indicators:
-            bollinger = ta.volatility.BollingerBands(df_copy['close'])
-            df_copy['bollinger_hband'] = bollinger.bollinger_hband()
-            df_copy['bollinger_lband'] = bollinger.bollinger_lband()
-            df_copy['bollinger_mband'] = bollinger.bollinger_mband()
-        
-        if 'sma' in indicators:
-            df_copy['sma_20'] = ta.trend.SMAIndicator(df_copy['close'], window=20).sma_indicator()
-            df_copy['sma_50'] = ta.trend.SMAIndicator(df_copy['close'], window=50).sma_indicator()
-        
-        if 'ema' in indicators:
-            df_copy['ema_20'] = ta.trend.EMAIndicator(df_copy['close'], window=20).ema_indicator()
-            df_copy['ema_50'] = ta.trend.EMAIndicator(df_copy['close'], window=50).ema_indicator()
-        
-        if 'adx' in indicators:
-            adx = ta.trend.ADXIndicator(df_copy['high'], df_copy['low'], df_copy['close'], window=14)
-            df_copy['adx'] = adx.adx()
-            df_copy['adx_pos'] = adx.adx_pos()
-            df_copy['adx_neg'] = adx.adx_neg()
-
-        if 'stoch' in indicators:
-            stoch = ta.momentum.StochasticOscillator(df_copy['high'], df_copy['low'], df_copy['close'], window=14)
-            df_copy['stoch_k'] = stoch.stoch()
-            df_copy['stoch_d'] = stoch.stoch_signal()
-
-        if 'volume_oscillator' in indicators:
-            df_copy['volume_oscillator'] = ta.volume.VolumeOscillator(df_copy['volume']).volume_oscillator()
-
-        logger.info(f"Added {len(indicators)} technical indicators.")
-        return df_copy.fillna(method='ffill').fillna(method='bfill') # Fill NaNs created by indicators
-
-    def create_features(self, df: pd.DataFrame) -> pd.DataFrame:
+    def add_macroeconomic_features(self, df: pd.DataFrame, macroeconomic_data: Optional[pd.DataFrame] = None) -> pd.DataFrame:
         """
-        Create additional features for AI model, e.g., price changes, volatility, etc.
+        Integrates relevant macroeconomic features.
+        Examples include interest rates, inflation, GDP growth, unemployment, etc.
         """
-        df_copy = df.copy()
+        if macroeconomic_data is not None and not macroeconomic_data.empty:
+            # Example: Join pre-processed macroeconomic data
+            # Macroeconomic data usually has lower frequency (monthly/quarterly)
+            df = df.merge(macroeconomic_data, left_index=True, right_index=True, how='left')
+            df = df.fillna(method='ffill') # Forward fill lower frequency data
+            logger.info("Added macroeconomic features.")
+        else:
+            logger.warning("No macroeconomic data provided for features.")
+            # Add placeholder columns if not provided
+            df['FED_FUNDS_RATE'] = 0.0
+            df['CPI_MOM'] = 0.0
+        return df
 
-        # Simple Price Changes / Returns
-        df_copy['daily_return'] = df_copy['close'].pct_change()
-        df_copy['log_return'] = np.log(df_copy['close'] / df_copy['close'].shift(1))
-        
-        # Volatility
-        df_copy['volatility_5d'] = df_copy['log_return'].rolling(window=5).std() * np.sqrt(5)
-        df_copy['volatility_20d'] = df_copy['log_return'].rolling(window=20).std() * np.sqrt(20)
-
-        # Volume-based features
-        df_copy['volume_change'] = df_copy['volume'].pct_change()
-        df_copy['volume_sma_5'] = df_copy['volume'].rolling(window=5).mean()
-        df_copy['volume_ratio'] = df_copy['volume'] / df_copy['volume_sma_5']
-
-        # Price range features
-        df_copy['high_low_range'] = (df_copy['high'] - df_copy['low']) / df_copy['close']
-        df_copy['open_close_range'] = (df_copy['close'] - df_copy['open']) / df_copy['open']
-
-        # Lagged features (important for time series models)
-        for col in ['close', 'volume', 'rsi', 'macd']: # Example columns to lag
-            if col in df_copy.columns:
-                for lag in [1][2][3]:
-                    df_copy[f'{col}_lag_{lag}'] = df_copy[col].shift(lag)
-        
-        logger.info("Created additional features.")
-        return df_copy.fillna(0) # Fill NaNs created by feature engineering, usually 0 or mean/median
-
-    def preprocess_data(self, df: pd.DataFrame, indicators: Optional[List[str]] = None) -> pd.DataFrame:
+    def add_alternative_data_features(self, df: pd.DataFrame, alternative_data: Optional[pd.DataFrame] = None) -> pd.DataFrame:
         """
-        Orchestrates the entire data processing pipeline.
+        Integrates alternative data features (e.g., satellite imagery, credit card transactions, supply chain data).
+        This is highly specific and requires external data sources.
         """
-        self.validate_ohlcv_data(df)
-        processed_df = self.clean_data(df)
-        processed_df = self.add_technical_indicators(processed_df, indicators)
-        processed_df = self.create_features(processed_df)
+        if alternative_data is not None and not alternative_data.empty:
+            # Example: Join pre-processed alternative data
+            df = df.merge(alternative_data, left_index=True, right_index=True, how='left')
+            df = df.fillna(method='ffill')
+            logger.info("Added alternative data features.")
+        else:
+            logger.warning("No alternative data provided for features.")
+            df['WEB_TRAFFIC_INDEX'] = 0.0 # Placeholder
+        return df
+
+    def create_target_variable(self, df: pd.DataFrame, prediction_horizon: int = 1) -> pd.DataFrame:
+        """
+        Creates the target variable for classification (e.g., future price movement).
+        1: price increases, -1: price decreases, 0: price stays within a threshold.
+        """
+        # Ensure 'close' column exists
+        if 'close' not in df.columns:
+            raise ValueError("DataFrame must contain a 'close' column to create target variable.")
         
-        logger.info("Data preprocessing complete.")
-        return processed_df
+        # Calculate future return
+        df['future_return'] = df['close'].shift(-prediction_horizon) / df['close'] - 1
+        
+        # Define movement thresholds (e.g., if price moves more than 0.1% or -0.1%)
+        up_threshold = self.config.get("TARGET_UP_THRESHOLD", 0.001) # 0.1%
+        down_threshold = self.config.get("TARGET_DOWN_THRESHOLD", -0.001) # -0.1%
+
+        df['target'] = 0 # Default to hold
+        df.loc[df['future_return'] > up_threshold, 'target'] = 1 # Buy
+        df.loc[df['future_return'] < down_threshold, 'target'] = -1 # Sell
+
+        # Drop the last 'prediction_horizon' rows as their target cannot be determined
+        df = df.iloc[:-prediction_horizon]
+        
+        logger.info(f"Created target variable with {prediction_horizon}-period lookahead.")
+        return df
+
