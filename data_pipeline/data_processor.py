@@ -2,7 +2,7 @@
 
 import pandas as pd
 import numpy as np
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 import logging
 from ..core.exceptions import DataValidationError
 
@@ -41,6 +41,8 @@ class DataProcessor:
             raise DataValidationError("Negative values found in OHLCV data.")
 
         # Check OHLC relationships
+        # This can be computationally intensive for large datasets; consider sampling or vectorized checks for production
+        # For simplicity, keeping row-wise check here. Vectorized check example: (df['high'] < df['low']).any()
         for i, row in df.iterrows():
             if not (row['high'] >= row['low'] and
                     row['high'] >= row['open'] and
@@ -89,9 +91,15 @@ class DataProcessor:
         if indicators is None:
             # Default set of indicators
             indicators = [
-                'rsi', 'macd', 'bollinger', 'sma', 'ema', 'adx', 'stoch'
+                'rsi', 'macd', 'bollinger', 'sma', 'ema', 'adx', 'stoch', 'volume_oscillator'
             ]
         
+        # Ensure required columns are present for indicators
+        # This is a simplified check; each indicator might have specific dependencies
+        if not all(col in df_copy.columns for col in ['open', 'high', 'low', 'close', 'volume']):
+            logger.error("Missing OHLCV data for technical indicator calculation.")
+            return df_copy
+            
         if 'rsi' in indicators:
             df_copy['rsi'] = ta.momentum.RSIIndicator(df_copy['close'], window=14).rsi()
         
@@ -126,11 +134,52 @@ class DataProcessor:
             df_copy['stoch_k'] = stoch.stoch()
             df_copy['stoch_d'] = stoch.stoch_signal()
 
+        if 'volume_oscillator' in indicators:
+            df_copy['volume_oscillator'] = ta.volume.VolumeOscillator(df_copy['volume']).volume_oscillator()
+
         logger.info(f"Added {len(indicators)} technical indicators.")
-        return df_copy
+        return df_copy.fillna(method='ffill').fillna(method='bfill') # Fill NaNs created by indicators
 
     def create_features(self, df: pd.DataFrame) -> pd.DataFrame:
         """
-        Create additional features for AI model, e.g., price changes, volatility.
+        Create additional features for AI model, e.g., price changes, volatility, etc.
         """
-        df
+        df_copy = df.copy()
+
+        # Simple Price Changes / Returns
+        df_copy['daily_return'] = df_copy['close'].pct_change()
+        df_copy['log_return'] = np.log(df_copy['close'] / df_copy['close'].shift(1))
+        
+        # Volatility
+        df_copy['volatility_5d'] = df_copy['log_return'].rolling(window=5).std() * np.sqrt(5)
+        df_copy['volatility_20d'] = df_copy['log_return'].rolling(window=20).std() * np.sqrt(20)
+
+        # Volume-based features
+        df_copy['volume_change'] = df_copy['volume'].pct_change()
+        df_copy['volume_sma_5'] = df_copy['volume'].rolling(window=5).mean()
+        df_copy['volume_ratio'] = df_copy['volume'] / df_copy['volume_sma_5']
+
+        # Price range features
+        df_copy['high_low_range'] = (df_copy['high'] - df_copy['low']) / df_copy['close']
+        df_copy['open_close_range'] = (df_copy['close'] - df_copy['open']) / df_copy['open']
+
+        # Lagged features (important for time series models)
+        for col in ['close', 'volume', 'rsi', 'macd']: # Example columns to lag
+            if col in df_copy.columns:
+                for lag in [1][2][3]:
+                    df_copy[f'{col}_lag_{lag}'] = df_copy[col].shift(lag)
+        
+        logger.info("Created additional features.")
+        return df_copy.fillna(0) # Fill NaNs created by feature engineering, usually 0 or mean/median
+
+    def preprocess_data(self, df: pd.DataFrame, indicators: Optional[List[str]] = None) -> pd.DataFrame:
+        """
+        Orchestrates the entire data processing pipeline.
+        """
+        self.validate_ohlcv_data(df)
+        processed_df = self.clean_data(df)
+        processed_df = self.add_technical_indicators(processed_df, indicators)
+        processed_df = self.create_features(processed_df)
+        
+        logger.info("Data preprocessing complete.")
+        return processed_df
